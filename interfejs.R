@@ -8,6 +8,10 @@ pg <- dbDriver("PostgreSQL")
 con <- dbConnect(pg, user="aleksandra", password="456789",
                  host="localhost", port=5432, dbname="project")
 
+ids <- dbGetQuery(con, "SELECT id_klienta FROM klienci")[,1]
+tance <- dbGetQuery(con, "SELECT nazwa FROM taniec")[,1]
+poziomy <- dbGetQuery(con, "SELECT id_grupy FROM zajecia ORDER BY id_grupy")[,1]
+
 
 ui <- fluidPage(
   setBackgroundColor(
@@ -36,7 +40,7 @@ ui <- fluidPage(
       selectInput(inputId = "poziom", 
                 label = "Wybierz numer grupy",
                 choices = poziomy,
-                selected=1)
+                selected=2)
 
       
     ),
@@ -113,13 +117,6 @@ ui <- fluidPage(
                  
                  div(style = "margin-top: 20px;"),
                  
-                 p("Jeśli chcesz zwiększyć poziom grup, kliknij przycisk 
-                   'Aktualizuj grupy' (rekomendowane działanie na koniec roku)"),
-                 
-                 actionButton("group_up", "Aktualizuj poziom grup"),
-                 
-                 div(style = "margin-top: 20px;"),
-                 
                  p("Dane każdych zajęć:"),
                  
                  verbatimTextOutput("zajecia"),
@@ -174,7 +171,7 @@ server <- function(input, output, session) {
     query1 <- paste("SELECT id_tanca FROM taniec WHERE nazwa=", taniec)
     nr_tanca <- dbGetQuery(con, query1)
     nr_tanca
-    query2 <- paste("SELECT DISTINCT k.id_klienta, k.imie, k.nazwisko, u.rola FROM 
+    query2 <- paste("SELECT k.id_klienta, k.imie, k.nazwisko, u.rola FROM 
                     klienci k INNER JOIN uczestnicy_zajec u USING(id_klienta) 
                     INNER JOIN prowadzacy USING(id_grupy, id_tanca) WHERE u.id_grupy=", 
                     input$poziom," AND u.id_tanca=", nr_tanca, "ORDER BY k.id_klienta")
@@ -251,10 +248,6 @@ server <- function(input, output, session) {
     query2 <- paste("DELETE FROM uczestnicy_zajec WHERE id_klienta=", input$id_k,
                     "AND id_grupy=", input$grupa_dod, "AND id_tanca=", id_tanca)
     dbGetQuery(con,query2)
-  })
-  
-  observeEvent(input$group_up, {
-    dbGetQuery(con,"SELECT zmiana_grupy()")
   })
   
   output$uczestnicy = renderPrint({
